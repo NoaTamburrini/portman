@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -38,6 +39,9 @@ func initialModel() Model {
 	ti := textinput.New()
 	ti.Placeholder = "Filter ports..."
 	ti.CharLimit = 50
+	ti.Width = 40
+	ti.PlaceholderStyle = placeholderStyle
+	ti.PromptStyle = filterStyle
 
 	return Model{
 		ports:         []scanner.Port{},
@@ -79,7 +83,9 @@ func (m *Model) filterPorts() {
 	filtered := []scanner.Port{}
 	for _, p := range m.ports {
 		// Check if filter matches port number, process name, or command
-		if strings.Contains(strings.ToLower(p.ProcessName), filter) ||
+		portNum := fmt.Sprintf("%d", p.Number)
+		if strings.Contains(portNum, filter) ||
+			strings.Contains(strings.ToLower(p.ProcessName), filter) ||
 			strings.Contains(strings.ToLower(p.Command), filter) ||
 			strings.Contains(strings.ToLower(p.Protocol), filter) {
 			filtered = append(filtered, p)

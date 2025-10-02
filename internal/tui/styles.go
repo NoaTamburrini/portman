@@ -56,4 +56,9 @@ var (
 	filterStyle = lipgloss.NewStyle().
 			Foreground(primaryColor).
 			Bold(true)
+
+	// Placeholder style
+	placeholderStyle = lipgloss.NewStyle().
+				Foreground(mutedColor).
+				Italic(true)
 )
