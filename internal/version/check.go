@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -40,7 +41,7 @@ func CheckForUpdate() {
 	updateLastCheck()
 
 	// Compare versions
-	if latestVersion != "" && latestVersion != "v"+Version {
+	if latestVersion != "" && isNewer(latestVersion, Version) {
 		fmt.Fprintf(os.Stderr, "\n⚠️  Update available: %s (current: v%s)\n", latestVersion, Version)
 		fmt.Fprintf(os.Stderr, "Run: curl -fsSL https://raw.githubusercontent.com/%s/%s/main/install.sh | sh\n\n", RepoOwner, RepoName)
 	}
@@ -87,4 +88,31 @@ func updateLastCheck() {
 func getCacheFile() string {
 	cacheDir, _ := os.UserCacheDir()
 	return filepath.Join(cacheDir, "portman", "last_update_check")
+}
+
+// isNewer compares two semantic versions and returns true if latest > current
+func isNewer(latest, current string) bool {
+	// Remove 'v' prefix if present
+	latest = strings.TrimPrefix(latest, "v")
+	current = strings.TrimPrefix(current, "v")
+
+	// Split into parts
+	latestParts := strings.Split(latest, ".")
+	currentParts := strings.Split(current, ".")
+
+	// Compare each part
+	for i := 0; i < len(latestParts) && i < len(currentParts); i++ {
+		var latestNum, currentNum int
+		fmt.Sscanf(latestParts[i], "%d", &latestNum)
+		fmt.Sscanf(currentParts[i], "%d", &currentNum)
+
+		if latestNum > currentNum {
+			return true
+		} else if latestNum < currentNum {
+			return false
+		}
+	}
+
+	// If all parts are equal, not newer
+	return false
 }
