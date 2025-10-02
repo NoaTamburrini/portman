@@ -1,3 +1,5 @@
+version: 2
+
 project_name: portman
 
 before:
@@ -14,6 +16,8 @@ builds:
       - amd64
       - arm64
     binary: portman
+    ldflags:
+      - -s -w -X github.com/NoaTamburrini/portman/internal/version.Version={{.Version}}
 
 archives:
   - format: tar.gz

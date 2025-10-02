@@ -10,11 +10,13 @@ import (
 )
 
 const (
-	Version     = "1.0.0"
 	RepoOwner   = "NoaTamburrini"
 	RepoName    = "portman"
 	CheckPeriod = 24 * time.Hour
 )
+
+// Version is set via ldflags during build
+var Version = "dev"
 
 type GitHubRelease struct {
 	TagName string `json:"tag_name"`
