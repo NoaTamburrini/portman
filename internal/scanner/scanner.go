@@ -211,3 +211,14 @@ func FindByPort(ports []Port, portNum int) *Port {
 	}
 	return nil
 }
+
+// FindAllByPort finds all processes using a specific port
+func FindAllByPort(ports []Port, portNum int) []Port {
+	var matches []Port
+	for _, p := range ports {
+		if p.Number == portNum {
+			matches = append(matches, p)
+		}
+	}
+	return matches
+}
