@@ -12,30 +12,48 @@ A fast and intuitive CLI tool for managing ports and processes on your system. K
 
 ## 📦 Installation
 
-### macOS (Apple Silicon)
+### Quick Install (Recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NoaTamburrini/portman/main/install.sh | sh
+```
+
+This script automatically detects your OS and architecture, then downloads and installs the latest version.
+
+### Manual Installation
+
+<details>
+<summary>Click to expand manual installation instructions</summary>
+
+#### macOS (Apple Silicon)
 ```bash
 curl -L https://github.com/NoaTamburrini/portman/releases/download/v1.0.0/portman-darwin-arm64 -o /usr/local/bin/portman && chmod +x /usr/local/bin/portman
 ```
 
-### macOS (Intel)
+#### macOS (Intel)
 ```bash
 curl -L https://github.com/NoaTamburrini/portman/releases/download/v1.0.0/portman-darwin-amd64 -o /usr/local/bin/portman && chmod +x /usr/local/bin/portman
 ```
 
-### Linux
+#### Linux
 ```bash
 curl -L https://github.com/NoaTamburrini/portman/releases/download/v1.0.0/portman-linux-amd64 -o /usr/local/bin/portman && chmod +x /usr/local/bin/portman
 ```
 
+</details>
+
 ## 🚀 Usage
 
 ### Interactive Mode
+
 Launch the TUI to browse and kill processes:
+
 ```bash
 portman
 ```
 
 **Keybindings:**
+
 - `↑/↓` or `j/k` - Navigate through ports
 - `Enter` - Kill selected process
 - `r` - Refresh port list
@@ -43,12 +61,15 @@ portman
 - `q` or `Ctrl+C` - Quit
 
 ### Command Mode
+
 Kill a process on a specific port:
+
 ```bash
 portman kill 3000
 ```
 
 ### Help
+
 ```bash
 portman help
 ```

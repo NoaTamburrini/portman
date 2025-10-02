@@ -1,5 +1,6 @@
 # Binaries
 portman
+portman-*
 *.exe
 *.dll
 *.so

@@ -8,6 +8,7 @@ func printHelp() {
 Usage:
   portman              Launch interactive TUI
   portman kill <port>  Kill process on specific port
+  portman version      Show version information
   portman help         Show this help message
 
 Keybindings (TUI):
@@ -20,6 +21,7 @@ Keybindings (TUI):
 Examples:
   portman              # Launch interactive mode
   portman kill 3000    # Kill process on port 3000
+  portman version      # Show version
 `
 	fmt.Println(help)
 }
