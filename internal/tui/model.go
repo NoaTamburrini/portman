@@ -3,7 +3,6 @@ package tui
 import (
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/NoaTamburrini/portman/internal/scanner"
 
@@ -18,7 +17,6 @@ type Model struct {
 	statusMessage  string
 	statusIsError  bool
 	scanning       bool
-	lastRefresh    time.Time
 	filterMode     bool
 	filterInput    textinput.Model
 	confirmingKill bool
@@ -68,30 +66,6 @@ func scanPorts() tea.Msg {
 	return scanCompleteMsg{ports: ports, err: nil}
 }
 
-// doKillPort kills a port by PID
-func doKillPort(pid int) tea.Cmd {
-	return func() tea.Msg {
-		// Import here to avoid circular dependency
-		result := killProcessByPID(pid)
-		return killCompleteMsg{
-			success: result.Success,
-			message: result.Message,
-		}
-	}
-}
-
-// Helper function to call process killer
-func killProcessByPID(pid int) struct {
-	Success bool
-	Message string
-} {
-	// We need to import the process package
-	// This is done in the update.go file where it's actually used
-	return struct {
-		Success bool
-		Message string
-	}{Success: false, Message: "Not implemented"}
-}
 
 // filterPorts filters the ports based on the filter string
 func (m *Model) filterPorts() {

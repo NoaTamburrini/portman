@@ -56,10 +56,4 @@ var (
 	filterStyle = lipgloss.NewStyle().
 			Foreground(primaryColor).
 			Bold(true)
-
-	// Border style
-	borderStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.RoundedBorder()).
-			BorderForeground(primaryColor).
-			Padding(0, 1)
 )
