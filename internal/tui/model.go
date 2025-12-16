@@ -8,6 +8,7 @@ import (
 	"github.com/NoaTamburrini/portman/internal/scanner"
 
 	"github.com/charmbracelet/bubbles/textinput"
+
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -62,7 +63,6 @@ func scanPorts() tea.Msg {
 		return scanCompleteMsg{ports: nil, err: err}
 	}
 
-	// Sort by port number
 	sort.Slice(ports, func(i, j int) bool {
 		return ports[i].Number < ports[j].Number
 	})
@@ -70,8 +70,6 @@ func scanPorts() tea.Msg {
 	return scanCompleteMsg{ports: ports, err: nil}
 }
 
-
-// filterPorts filters the ports based on the filter string
 func (m *Model) filterPorts() {
 	filter := strings.ToLower(strings.TrimSpace(m.filterInput.Value()))
 
@@ -82,7 +80,6 @@ func (m *Model) filterPorts() {
 
 	filtered := []scanner.Port{}
 	for _, p := range m.ports {
-		// Check if filter matches port number, process name, or command
 		portNum := fmt.Sprintf("%d", p.Number)
 		if strings.Contains(portNum, filter) ||
 			strings.Contains(strings.ToLower(p.ProcessName), filter) ||
