@@ -6,12 +6,12 @@ import (
 
 var (
 	// Colors
-	primaryColor   = lipgloss.Color("86")   // Cyan
-	secondaryColor = lipgloss.Color("212")  // Pink
-	successColor   = lipgloss.Color("42")   // Green
-	errorColor     = lipgloss.Color("196")  // Red
-	mutedColor     = lipgloss.Color("241")  // Gray
-	selectedColor  = lipgloss.Color("219")  // Light purple
+	primaryColor   = lipgloss.Color("86")  // Cyan
+	secondaryColor = lipgloss.Color("212") // Pink
+	successColor   = lipgloss.Color("42")  // Green
+	errorColor     = lipgloss.Color("196") // Red
+	mutedColor     = lipgloss.Color("241") // Gray
+	selectedColor  = lipgloss.Color("219") // Light purple
 
 	// Title style
 	titleStyle = lipgloss.NewStyle().

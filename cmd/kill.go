@@ -82,11 +82,11 @@ func executeKill() {
 }
 
 type selectionModel struct {
-	choices  []scanner.Port
-	cursor   int
-	selected map[int]bool
-	portNum  int
-	quitting bool
+	choices   []scanner.Port
+	cursor    int
+	selected  map[int]bool
+	portNum   int
+	quitting  bool
 	cancelled bool
 }
 

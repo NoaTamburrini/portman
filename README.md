@@ -8,17 +8,25 @@ A fast and intuitive CLI tool for managing ports and processes on your system. K
 - ⚡ **Quick Kill** - Instantly kill processes by port number
 - 🔍 **Smart Filtering** - Search and filter ports in real-time
 - 🎯 **Simple Commands** - Easy-to-use CLI for automation
-- 💻 **Cross-Platform** - Works on macOS and Linux
+- 💻 **Cross-Platform** - Works on macOS, Linux, and Windows
 
 ## 📦 Installation
 
 ### Quick Install (Recommended)
 
+**macOS / Linux:**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/NoaTamburrini/portman/main/install.sh | sh
 ```
 
-This script automatically detects your OS and architecture, then downloads and installs the latest version.
+**Windows (PowerShell):**
+
+```powershell
+irm https://raw.githubusercontent.com/NoaTamburrini/portman/main/install.ps1 | iex
+```
+
+These scripts automatically detect your architecture and install the latest version.
 
 ### Manual Installation
 
@@ -39,6 +47,9 @@ curl -L https://github.com/NoaTamburrini/portman/releases/download/v1.0.0/portma
 ```bash
 curl -L https://github.com/NoaTamburrini/portman/releases/download/v1.0.0/portman-linux-amd64 -o /usr/local/bin/portman && chmod +x /usr/local/bin/portman
 ```
+
+#### Windows
+Download the latest `.zip` from the [releases page](https://github.com/NoaTamburrini/portman/releases), extract `portman.exe`, and add it to your `PATH`.
 
 </details>
 
