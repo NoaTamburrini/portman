@@ -75,6 +75,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.statusIsError = false
 		}
 
+	case updateCheckMsg:
+		if msg.info.Available {
+			m.updateInfo = &msg.info
+		}
+		return m, nil
+
 	case killCompleteMsg:
 		if msg.success {
 			m.statusMessage = fmt.Sprintf("✓ %s", msg.message)

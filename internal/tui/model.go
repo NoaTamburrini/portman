@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/NoaTamburrini/portman/internal/scanner"
+	"github.com/NoaTamburrini/portman/internal/version"
 
 	"github.com/charmbracelet/bubbles/textinput"
 
@@ -24,6 +25,7 @@ type Model struct {
 	confirmingKill bool
 	width          int
 	height         int
+	updateInfo     *version.UpdateInfo
 }
 
 type scanCompleteMsg struct {
@@ -34,6 +36,10 @@ type scanCompleteMsg struct {
 type killCompleteMsg struct {
 	success bool
 	message string
+}
+
+type updateCheckMsg struct {
+	info version.UpdateInfo
 }
 
 func initialModel() Model {
@@ -53,7 +59,12 @@ func initialModel() Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return scanPorts
+	return tea.Batch(scanPorts, checkForUpdate)
+}
+
+func checkForUpdate() tea.Msg {
+	info := version.GetUpdateInfoNow()
+	return updateCheckMsg{info: info}
 }
 
 // scanPorts performs a port scan

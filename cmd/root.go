@@ -10,14 +10,15 @@ import (
 
 // Execute is the main entry point for the CLI
 func Execute() {
-	// Check for updates in background (non-blocking, cached)
-	version.CheckForUpdate()
-
 	if len(os.Args) > 1 {
+		// Check for updates only in command mode (TUI handles it internally)
+		version.CheckForUpdate()
 		// Handle subcommands
 		switch os.Args[1] {
 		case "kill":
 			executeKill()
+		case "upgrade":
+			executeUpgrade()
 		case "help", "--help", "-h":
 			printHelp()
 		case "version", "--version", "-v":

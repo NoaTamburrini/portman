@@ -61,4 +61,9 @@ var (
 	placeholderStyle = lipgloss.NewStyle().
 				Foreground(mutedColor).
 				Italic(true)
+
+	// Update notification style
+	updateStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("214")).
+			Bold(true)
 )

@@ -104,6 +104,14 @@ func (m Model) View() string {
 
 	b.WriteString("\n")
 
+	// Update notification
+	if m.updateInfo != nil {
+		updateMsg := fmt.Sprintf("Update available: %s (current: v%s) — run: portman upgrade",
+			m.updateInfo.LatestVersion, m.updateInfo.CurrentVersion)
+		b.WriteString(updateStyle.Render(updateMsg))
+		b.WriteString("\n")
+	}
+
 	// Help text
 	help := ""
 	if m.filterMode {

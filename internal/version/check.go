@@ -23,28 +23,52 @@ type GitHubRelease struct {
 	TagName string `json:"tag_name"`
 }
 
-// CheckForUpdate checks if a newer version is available and prints a message
-func CheckForUpdate() {
-	// Check if we should skip (last check was recent)
-	if shouldSkipCheck() {
-		return
-	}
+// UpdateInfo contains information about an available update
+type UpdateInfo struct {
+	Available      bool
+	LatestVersion  string
+	CurrentVersion string
+}
 
-	// Check GitHub for latest release
+// CheckForUpdate checks if a newer version is available and prints a message (for non-TUI usage)
+func CheckForUpdate() {
+	info := GetUpdateInfo()
+	if info.Available {
+		fmt.Fprintf(os.Stderr, "\n⚠️  Update available: %s (current: v%s)\n", info.LatestVersion, info.CurrentVersion)
+		fmt.Fprintf(os.Stderr, "Run: portman upgrade\n\n")
+	}
+}
+
+// GetUpdateInfo checks if a newer version is available (respects 24h cache for CLI mode)
+func GetUpdateInfo() UpdateInfo {
+	if shouldSkipCheck() {
+		return UpdateInfo{}
+	}
+	return fetchUpdateInfo()
+}
+
+// GetUpdateInfoNow checks if a newer version is available (always checks, ignores cache)
+func GetUpdateInfoNow() UpdateInfo {
+	return fetchUpdateInfo()
+}
+
+func fetchUpdateInfo() UpdateInfo {
 	latestVersion, err := getLatestVersion()
 	if err != nil {
-		// Silently fail - don't bother user with network errors
-		return
+		return UpdateInfo{}
 	}
 
-	// Update last check time
 	updateLastCheck()
 
-	// Compare versions
 	if latestVersion != "" && isNewer(latestVersion, Version) {
-		fmt.Fprintf(os.Stderr, "\n⚠️  Update available: %s (current: v%s)\n", latestVersion, Version)
-		fmt.Fprintf(os.Stderr, "Run: curl -fsSL https://raw.githubusercontent.com/%s/%s/main/install.sh | sh\n\n", RepoOwner, RepoName)
+		return UpdateInfo{
+			Available:      true,
+			LatestVersion:  latestVersion,
+			CurrentVersion: Version,
+		}
 	}
+
+	return UpdateInfo{}
 }
 
 func getLatestVersion() (string, error) {

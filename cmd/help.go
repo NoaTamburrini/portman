@@ -8,6 +8,7 @@ func printHelp() {
 Usage:
   portman              Launch interactive TUI
   portman kill <port>  Kill process on specific port
+  portman upgrade      Upgrade to the latest version
   portman version      Show version information
   portman help         Show this help message
 
