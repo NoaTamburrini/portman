@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -11,15 +12,50 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+type killOptions struct {
+	interactive bool
+	jsonOutput  bool
+	quiet       bool
+	all         bool
+}
+
+// killResult is the per-process outcome emitted with --json.
+type killResult struct {
+	Port    int    `json:"port"`
+	PID     int    `json:"pid"`
+	Process string `json:"process"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
 func executeKill() {
-	if len(os.Args) < 3 {
-		fmt.Println("Usage: portman kill <port>")
+	portStr := ""
+	opts := killOptions{}
+	for _, arg := range os.Args[2:] {
+		switch arg {
+		case "-i", "--interactive":
+			opts.interactive = true
+		case "--json":
+			opts.jsonOutput = true
+		case "-q", "--quiet":
+			opts.quiet = true
+		case "--all", "-a":
+			opts.all = true
+		default:
+			if portStr == "" {
+				portStr = arg
+			}
+		}
+	}
+
+	if portStr == "" {
+		fmt.Fprintln(os.Stderr, "Usage: portman kill <port> [-i] [--all] [--json] [-q]")
 		os.Exit(1)
 	}
 
-	portNum, err := strconv.Atoi(os.Args[2])
+	portNum, err := strconv.Atoi(portStr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid port number: %s\n", os.Args[2])
+		fmt.Fprintf(os.Stderr, "Invalid port number: %s\n", portStr)
 		os.Exit(1)
 	}
 
@@ -28,56 +64,85 @@ func executeKill() {
 		os.Exit(1)
 	}
 
-	// Scan to find all processes on the port
 	ports, err := scanner.ScanPorts()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error scanning ports: %v\n", err)
 		os.Exit(1)
 	}
 
-	matches := scanner.FindAllByPort(ports, portNum)
-	if len(matches) == 0 {
-		fmt.Printf("No process found on port %d\n", portNum)
+	// Pick targets: listeners only by default, every match with --all.
+	var targets []scanner.Port
+	if opts.all {
+		targets = scanner.FindAllByPort(ports, portNum)
+	} else {
+		targets = scanner.FindKillTargets(ports, portNum)
+	}
+
+	if len(targets) == 0 {
+		if opts.jsonOutput {
+			fmt.Println("[]")
+		} else if !opts.quiet {
+			if len(scanner.FindAllByPort(ports, portNum)) > 0 {
+				fmt.Fprintf(os.Stderr, "No process listening on port %d (use --all to kill connections)\n", portNum)
+			} else {
+				fmt.Fprintf(os.Stderr, "No process found on port %d\n", portNum)
+			}
+		}
 		os.Exit(1)
 	}
 
-	// If only one process, kill it directly
-	if len(matches) == 1 {
-		port := matches[0]
-		fmt.Printf("Killing process on port %d (PID: %d, Process: %s)...\n",
-			port.Number, port.PID, port.ProcessName)
-
-		result := process.KillProcess(port.PID)
-		if result.Success {
-			fmt.Printf("✓ %s\n", result.Message)
-		} else {
-			fmt.Fprintf(os.Stderr, "✗ %s\n", result.Message)
-			os.Exit(1)
+	// Interactive picker is opt-in only; it never runs for scripts/agents.
+	if opts.interactive && len(targets) > 1 {
+		selected := showSelectionMenu(targets, portNum)
+		if selected == nil {
+			if !opts.quiet {
+				fmt.Println("Cancelled")
+			}
+			return
 		}
-		return
+		targets = selected
 	}
 
-	// Multiple processes - show Bubble Tea selection menu
-	selected := showSelectionMenu(matches, portNum)
+	killTargets(targets, opts)
+}
 
-	if selected == nil {
-		fmt.Println("Cancelled")
-		return
-	}
+// killTargets kills each target and reports results per the output options.
+func killTargets(targets []scanner.Port, opts killOptions) {
+	results := make([]killResult, 0, len(targets))
+	anyFailed := false
 
-	// Kill all selected
-	if len(selected) == len(matches) {
-		fmt.Printf("Killing all %d processes on port %d...\n", len(selected), portNum)
-	}
-
-	for _, p := range selected {
-		fmt.Printf("Killing PID %d (%s)...\n", p.PID, p.ProcessName)
-		result := process.KillProcess(p.PID)
-		if result.Success {
-			fmt.Printf("✓ %s\n", result.Message)
-		} else {
-			fmt.Fprintf(os.Stderr, "✗ %s\n", result.Message)
+	for _, p := range targets {
+		res := process.KillProcess(p.PID)
+		if !res.Success {
+			anyFailed = true
 		}
+		results = append(results, killResult{
+			Port:    p.Number,
+			PID:     p.PID,
+			Process: p.ProcessName,
+			Success: res.Success,
+			Message: res.Message,
+		})
+	}
+
+	switch {
+	case opts.jsonOutput:
+		out, _ := json.Marshal(results)
+		fmt.Println(string(out))
+	case opts.quiet:
+		// exit code only
+	default:
+		for _, r := range results {
+			if r.Success {
+				fmt.Printf("✓ killed %d (%s, pid %d)\n", r.Port, r.Process, r.PID)
+			} else {
+				fmt.Fprintf(os.Stderr, "✗ port %d (%s, pid %d): %s\n", r.Port, r.Process, r.PID, r.Message)
+			}
+		}
+	}
+
+	if anyFailed {
+		os.Exit(1)
 	}
 }
 

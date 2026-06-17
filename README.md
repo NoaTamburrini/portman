@@ -73,10 +73,21 @@ portman
 
 ### Command Mode
 
-Kill a process on a specific port:
+Kill the process listening on a port. This is **direct** — no prompt, no menu:
 
 ```bash
 portman kill 3000
+# ✓ killed 3000 (node, pid 1234)
+```
+
+`kill` targets the **listening (server)** socket by default, so it won't kill a
+client connection that happens to share the port — for example a browser tab
+connected to your dev server. Pass `--all` if you really want to kill those too.
+
+List the listening ports:
+
+```bash
+portman list
 ```
 
 ### Help
@@ -97,6 +108,37 @@ portman kill 3000
 # Show help
 portman --help
 ```
+
+## 🤖 Scripting / AI agent usage
+
+Every command works non-interactively, so portman is safe to drive from scripts
+or AI agents without anything blocking on a terminal prompt.
+
+```bash
+# Kill instantly — one short line, no prompt, no menu
+portman kill 3000              # ✓ killed 3000 (node, pid 1234)
+
+# Silent: print nothing, rely on the exit code
+portman kill 3000 -q
+
+# Structured output for parsing
+portman kill 3000 --json       # [{"port":3000,"pid":1234,"process":"node","success":true,"message":"..."}]
+
+# List only listening ports (compact), as JSON
+portman list --json
+
+# Just one port's listeners
+portman list 3000 --json
+```
+
+Key points for agents:
+
+- `kill` only targets the **LISTEN**ing process by default — it never kills a
+  client connection (e.g. your browser) that shares the port number.
+- Multiple listeners on one port (e.g. IPv4 + IPv6) are all killed directly. The
+  interactive picker is opt-in via `-i` and is only for human use.
+- `list` shows **listeners only** by default, keeping output small. Use `--all`
+  for the full picture including established connections.
 
 ## 📝 License
 

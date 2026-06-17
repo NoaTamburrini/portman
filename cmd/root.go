@@ -17,6 +17,8 @@ func Execute() {
 		switch os.Args[1] {
 		case "kill":
 			executeKill()
+		case "list", "ls":
+			executeList()
 		case "upgrade":
 			executeUpgrade()
 		case "help", "--help", "-h":

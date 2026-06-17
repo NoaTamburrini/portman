@@ -7,4 +7,10 @@ type Port struct {
 	ProcessName string `json:"process"`
 	Command     string `json:"command"`
 	Protocol    string `json:"protocol"`
+	State       string `json:"state"` // LISTEN, ESTABLISHED, or "" for udp/stateless
+}
+
+// IsListening reports whether this socket is a listening (server) socket.
+func (p Port) IsListening() bool {
+	return p.State == "LISTEN"
 }

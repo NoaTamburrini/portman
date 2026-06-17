@@ -67,23 +67,32 @@ func parseUnixOutput(output string) ([]Port, error) {
 			continue
 		}
 
-		// Extract port number from address
+		// Extract the local port. For an established connection the address is
+		// "local->remote" (e.g. 192.168.1.45:56060->192.168.1.35:57819) — take the
+		// local side so we don't grab the remote port.
+		local := address
+		if idx := strings.Index(local, "->"); idx != -1 {
+			local = local[:idx]
+		}
+
 		var port int
-		if strings.Contains(address, ":") {
-			parts := strings.Split(address, ":")
-			if len(parts) >= 2 {
-				portStr := parts[len(parts)-1]
-				// Remove any trailing characters like (LISTEN)
-				portStr = strings.Split(portStr, "(")[0]
-				port, err = strconv.Atoi(portStr)
-				if err != nil {
-					continue
-				}
+		if strings.Contains(local, ":") {
+			parts := strings.Split(local, ":")
+			portStr := parts[len(parts)-1]
+			port, err = strconv.Atoi(portStr)
+			if err != nil {
+				continue
 			}
 		}
 
 		if port == 0 {
 			continue
+		}
+
+		// Connection state, if present, is the next field e.g. "(LISTEN)".
+		state := ""
+		if len(fields) > 9 {
+			state = strings.Trim(fields[9], "()")
 		}
 
 		// Get command (rest of the line)
@@ -101,6 +110,7 @@ func parseUnixOutput(output string) ([]Port, error) {
 			ProcessName: processName,
 			Command:     command,
 			Protocol:    protocol,
+			State:       state,
 		}
 	}
 
@@ -164,6 +174,16 @@ func parseWindowsOutput(output string) ([]Port, error) {
 			continue
 		}
 
+		// TCP rows carry a State column before the PID (e.g. LISTENING,
+		// ESTABLISHED); UDP rows have none. Normalize LISTENING -> LISTEN.
+		state := ""
+		if strings.HasPrefix(protocol, "tcp") && len(fields) >= 4 {
+			state = strings.ToUpper(fields[len(fields)-2])
+			if state == "LISTENING" {
+				state = "LISTEN"
+			}
+		}
+
 		// Get process name from PID (Windows specific)
 		processName := getProcessNameWindows(pid)
 
@@ -175,6 +195,7 @@ func parseWindowsOutput(output string) ([]Port, error) {
 			ProcessName: processName,
 			Command:     processName,
 			Protocol:    protocol,
+			State:       state,
 		}
 	}
 
@@ -221,4 +242,34 @@ func FindAllByPort(ports []Port, portNum int) []Port {
 		}
 	}
 	return matches
+}
+
+// FindKillTargets returns the processes to kill for a port: the listening
+// (server) sockets if any exist, otherwise all matches. This avoids killing a
+// client connection (e.g. a browser tab) that merely shares the port number.
+func FindKillTargets(ports []Port, portNum int) []Port {
+	matches := FindAllByPort(ports, portNum)
+
+	var listening []Port
+	for _, p := range matches {
+		if p.IsListening() {
+			listening = append(listening, p)
+		}
+	}
+
+	if len(listening) > 0 {
+		return listening
+	}
+	return matches
+}
+
+// FilterListening returns only the listening (server) sockets.
+func FilterListening(ports []Port) []Port {
+	var listening []Port
+	for _, p := range ports {
+		if p.IsListening() {
+			listening = append(listening, p)
+		}
+	}
+	return listening
 }
