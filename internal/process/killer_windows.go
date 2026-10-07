@@ -3,9 +3,11 @@
 package process
 
 import (
+	"encoding/csv"
 	"fmt"
-	"os"
 	"os/exec"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -51,37 +53,37 @@ func waitForTermination(pid int, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 
 	for time.Now().Before(deadline) {
-		process, err := os.FindProcess(pid)
-		if err != nil {
+		if !IsProcessRunning(pid) {
 			return true
 		}
-
-		// On Windows, FindProcess always succeeds, so we check if we can open it
-		err = process.Signal(os.Kill)
-		if err != nil {
-			return true
-		}
-		// If Signal(Kill) succeeds without error, process still exists
-		// but we don't actually want to kill it here — just checking
-		// Use tasklist to verify
-		cmd := exec.Command("tasklist", "/FI", fmt.Sprintf("PID eq %d", pid), "/NH")
-		output, err := cmd.Output()
-		if err != nil || len(output) == 0 {
-			return true
-		}
-
 		time.Sleep(100 * time.Millisecond)
 	}
 
 	return false
 }
 
-// IsProcessRunning checks if a process is still running
+// IsProcessRunning checks if a process is still running.
+// tasklist prints a localized "no tasks" message instead of empty output when
+// nothing matches, so the PID column of the CSV output is checked explicitly.
 func IsProcessRunning(pid int) bool {
-	cmd := exec.Command("tasklist", "/FI", fmt.Sprintf("PID eq %d", pid), "/NH")
+	cmd := exec.Command("tasklist", "/FI", fmt.Sprintf("PID eq %d", pid), "/FO", "CSV", "/NH")
 	output, err := cmd.Output()
 	if err != nil {
 		return false
 	}
-	return len(output) > 0 && string(output) != ""
+
+	reader := csv.NewReader(strings.NewReader(string(output)))
+	reader.FieldsPerRecord = -1
+	records, err := reader.ReadAll()
+	if err != nil {
+		return false
+	}
+
+	want := strconv.Itoa(pid)
+	for _, record := range records {
+		if len(record) > 1 && strings.TrimSpace(record[1]) == want {
+			return true
+		}
+	}
+	return false
 }

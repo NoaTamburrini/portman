@@ -35,7 +35,10 @@ func (m Model) View() string {
 	}
 
 	// Port list
-	if len(m.filteredPorts) == 0 {
+	if m.scanning && len(m.ports) == 0 {
+		b.WriteString(renderMuted("Scanning ports..."))
+		b.WriteString("\n\n")
+	} else if len(m.filteredPorts) == 0 {
 		b.WriteString(renderMuted("No ports found"))
 		b.WriteString("\n\n")
 	} else {

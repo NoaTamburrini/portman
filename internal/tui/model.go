@@ -53,6 +53,7 @@ func initialModel() Model {
 	return Model{
 		ports:         []scanner.Port{},
 		filteredPorts: []scanner.Port{},
+		scanning:      true,
 		cursor:        0,
 		filterInput:   ti,
 	}

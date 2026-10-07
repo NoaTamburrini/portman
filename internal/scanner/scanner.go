@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"encoding/csv"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -131,71 +132,75 @@ func scanPortsWindows() ([]Port, error) {
 		return nil, fmt.Errorf("failed to execute netstat: %w", err)
 	}
 
-	return parseWindowsOutput(string(output))
-}
-
-// parseWindowsOutput parses the output from netstat on Windows
-func parseWindowsOutput(output string) ([]Port, error) {
-	lines := strings.Split(output, "\n")
-	if len(lines) < 4 {
-		return []Port{}, nil
+	ports, err := parseWindowsOutput(string(output))
+	if err != nil {
+		return nil, err
 	}
 
+	names := getProcessNamesWindows()
+	for i := range ports {
+		name, ok := names[ports[i].PID]
+		if !ok {
+			name = "unknown"
+		}
+		ports[i].ProcessName = name
+		ports[i].Command = name
+	}
+
+	return ports, nil
+}
+
+// parseWindowsOutput parses the output from netstat on Windows.
+// netstat headers and TCP state names are localized (e.g. "ÉCOUTE" on French
+// systems), so rows are identified by protocol and a listening TCP socket by
+// its unspecified foreign address rather than by the state text.
+func parseWindowsOutput(output string) ([]Port, error) {
 	portMap := make(map[string]Port)
 
-	for _, line := range lines[4:] { // Skip headers
-		if line == "" {
-			continue
-		}
-
+	for _, line := range strings.Split(output, "\n") {
 		fields := strings.Fields(line)
-		if len(fields) < 5 {
+		if len(fields) < 4 {
 			continue
 		}
 
 		protocol := strings.ToLower(fields[0])
-		localAddress := fields[1]
-		pidStr := fields[len(fields)-1]
-
-		// Parse PID
-		pid, err := strconv.Atoi(pidStr)
-		if err != nil {
+		isTCP := strings.HasPrefix(protocol, "tcp")
+		if !isTCP && !strings.HasPrefix(protocol, "udp") {
+			continue
+		}
+		if isTCP && len(fields) < 5 {
 			continue
 		}
 
-		// Extract port from local address
-		parts := strings.Split(localAddress, ":")
-		if len(parts) < 2 {
+		pid, err := strconv.Atoi(fields[len(fields)-1])
+		if err != nil || pid == 0 {
 			continue
 		}
 
-		port, err := strconv.Atoi(parts[len(parts)-1])
+		port, err := windowsAddressPort(fields[1])
 		if err != nil || port == 0 {
 			continue
 		}
 
-		// TCP rows carry a State column before the PID (e.g. LISTENING,
-		// ESTABLISHED); UDP rows have none. Normalize LISTENING -> LISTEN.
 		state := ""
-		if strings.HasPrefix(protocol, "tcp") && len(fields) >= 4 {
-			state = strings.ToUpper(fields[len(fields)-2])
-			if state == "LISTENING" {
+		if isTCP {
+			if isUnspecifiedRemote(fields[2]) {
 				state = "LISTEN"
+			} else {
+				state = strings.ToUpper(fields[3])
 			}
 		}
 
-		// Get process name from PID (Windows specific)
-		processName := getProcessNameWindows(pid)
-
 		key := fmt.Sprintf("%s-%d-%d", protocol, port, pid)
+		if existing, ok := portMap[key]; ok && existing.IsListening() {
+			continue
+		}
 
 		portMap[key] = Port{
-			Number:      port,
-			PID:         pid,
-			ProcessName: processName,
-			Command:     processName,
-			Protocol:    protocol,
-			State:       state,
+			Number:   port,
+			PID:      pid,
+			Protocol: protocol,
+			State:    state,
 		}
 	}
 
@@ -207,20 +212,47 @@ func parseWindowsOutput(output string) ([]Port, error) {
 	return ports, nil
 }
 
-// getProcessNameWindows gets the process name from PID on Windows
-func getProcessNameWindows(pid int) string {
-	cmd := exec.Command("tasklist", "/FI", fmt.Sprintf("PID eq %d", pid), "/FO", "CSV", "/NH")
-	output, err := cmd.Output()
+func windowsAddressPort(address string) (int, error) {
+	idx := strings.LastIndex(address, ":")
+	if idx == -1 {
+		return 0, fmt.Errorf("no port in address %q", address)
+	}
+	return strconv.Atoi(address[idx+1:])
+}
+
+func isUnspecifiedRemote(address string) bool {
+	return strings.HasSuffix(address, ":0") || strings.HasSuffix(address, ":*")
+}
+
+// getProcessNamesWindows maps every PID to its image name with a single
+// tasklist call; calling it per PID made scans take tens of seconds.
+func getProcessNamesWindows() map[int]string {
+	names := make(map[int]string)
+
+	output, err := exec.Command("tasklist", "/FO", "CSV", "/NH").Output()
 	if err != nil {
-		return "unknown"
+		return names
 	}
 
-	fields := strings.Split(strings.TrimSpace(string(output)), ",")
-	if len(fields) > 0 {
-		return strings.Trim(fields[0], "\"")
+	reader := csv.NewReader(strings.NewReader(string(output)))
+	reader.FieldsPerRecord = -1
+	records, err := reader.ReadAll()
+	if err != nil {
+		return names
 	}
 
-	return "unknown"
+	for _, record := range records {
+		if len(record) < 2 {
+			continue
+		}
+		pid, err := strconv.Atoi(strings.TrimSpace(record[1]))
+		if err != nil {
+			continue
+		}
+		names[pid] = record[0]
+	}
+
+	return names
 }
 
 // FindByPort finds a port by its port number
